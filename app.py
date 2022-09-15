@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_expects_json import expects_json
 #This module is for the schedule task runing in backgroud
 from apscheduler.schedulers.background import BackgroundScheduler
+from flask_sqlalchemy import SQLAlchemy
 
 import logging
 #Configuring the logging
@@ -20,6 +21,24 @@ countries = [
 ]
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///countries.db'
+
+#Initialize the database
+db = SQLAlchemy(app)
+
+#Create db model
+class Country(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256), nullable=False)
+    capital = db.Column(db.String(256), nullable=False)
+    area = db.Column(db.Integer)
+
+#Create function to return a string when we add a country
+def __repr__(self):
+    return "{0}".format(self.name)
+
+
+
 
 def biggest_area():
     country_biggest_area_pos = 0

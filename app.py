@@ -23,7 +23,7 @@ app = Flask(__name__)
 
 def biggest_area():
     country_biggest_area_pos = 0
-    for pos in range(1,len(countries)-1):
+    for pos in range(1,len(countries)):
         if countries[pos]["area"] > countries[country_biggest_area_pos]["area"]:
             country_biggest_area_pos = pos
     msg= "The country with the biggest area in the collection is {0} with {1} km2".\
@@ -31,7 +31,7 @@ def biggest_area():
     app.logger.info(msg)
 
 scheduler = BackgroundScheduler()
-job = scheduler.add_job(biggest_area, 'interval', minutes=1)
+job = scheduler.add_job(biggest_area, 'interval', seconds=10)
 scheduler.start()
 
 def _find_next_id():

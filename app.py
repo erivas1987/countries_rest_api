@@ -1,14 +1,17 @@
 #app.py
 from flask import Flask, request, jsonify
 from flask_expects_json import expects_json
+
 #This module is for the schedule task runing in backgroud
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_sqlalchemy import SQLAlchemy
-
+from config import configParser
 import logging
+
 #Configuring the logging
-logging.basicConfig(filename='record.log',
-                level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
+
+logging.basicConfig(filename=configParser.get('Logging','log_file'),
+                level=logging.getLevelName(configParser.get('Logging','log_level')), format=configParser.get('Logging','log_format'))
 
 """
 Collection of test data in memory
@@ -21,32 +24,43 @@ countries = [
 ]
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///countries.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{configParser.get('Database','db_location')}"
 
 #Initialize the database
 db = SQLAlchemy(app)
 
-#Create db model
+#Create db model for Country
 class Country(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), nullable=False)
     capital = db.Column(db.String(256), nullable=False)
     area = db.Column(db.Integer)
 
-#Create function to return a string when we add a country
-def __repr__(self):
-    return "{0}".format(self.name)
+    #Function to return a string when we add a country
+    def __repr__(self):
+        return "{0} with {1} mk2".format(self.name, self.area)
 
+def initializeDBData():
+    app.logger.info("Adding test data to database")
+    thailand = Country(name="Thailand", capital = "Bangkok", area = 513120)
+    australia = Country(name="Australia", capital = "Canberra", area = 7617930)
+    egypt = Country(name="Egypt", capital = "Cairo", area = 1010408)
+    cuba = Country(name="Cuba", capital ="Habana", area = 110860)
+    for country in (thailand, australia, egypt, cuba):
+        db.session.add(country) 
+    db.session.commit()
 
+    app.logger.info("Test data added successfully to the database")
 
+initializeDBData()
 
 def biggest_area():
-    country_biggest_area_pos = 0
-    for pos in range(1,len(countries)):
-        if countries[pos]["area"] > countries[country_biggest_area_pos]["area"]:
-            country_biggest_area_pos = pos
-    msg= "The country with the biggest area in the collection is {0} with {1} km2".\
-    format(countries[country_biggest_area_pos]["name"], countries[country_biggest_area_pos]["area"] )
+    """Query the database to get the country with the biggest area
+
+    Logs the country found in the database
+    """
+    biggest_country =  db.session.query(Country).order_by(Country.area.desc()).first() 
+    msg= f"The country with the biggest area in the collection is {biggest_country}"
     app.logger.info(msg)
 
 scheduler = BackgroundScheduler()
@@ -66,6 +80,7 @@ def _find_next_id():
 def get_countries():
     return jsonify(countries)
 
+#Defining the Country schema used by expects_json decorator to validate the data posted to /countries
 schema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/product.schema.json",
@@ -85,8 +100,16 @@ schema = {
 def add_country():
     if request.is_json:
         country = request.get_json()
-        country["id"] = _find_next_id()
-        countries.append(country)
-        app.logger.info("Added new country {0} succesfully".format(country))
-        return country, 201
+        #country["id"] = _find_next_id()
+        #countries.append(country)
+        new_country=Country(name=country["name"], capital=country["capital"], area=country["area"])
+        #Push to database
+        try:
+            db.session.add(new_country)
+            db.session.commit()
+            app.logger.info("Added new country {0} succesfully".format(country))
+            return country, 201
+        except:
+            app.logger.info("There was an error adding {0}".format(country))
+            return {"error": "Error while adding country"}, 500
     return {"error": "Request must be JSON"}, 415

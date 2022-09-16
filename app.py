@@ -16,12 +16,12 @@ logging.basicConfig(filename=configParser.get('Logging','log_file'),
 """
 Collection of test data in memory
 """
-countries = [
-    {"id": 1, "name": "Thailand", "capital": "Bangkok", "area": 513120},
-    {"id": 2, "name": "Australia", "capital": "Canberra", "area": 7617930},
-    {"id": 3, "name": "Egypt", "capital": "Cairo", "area": 1010408},
-    {"id": 4, "name": "Cuba", "capital": "Habana", "area": 110860 },
-]
+#countries = [
+#    {"id": 1, "name": "Thailand", "capital": "Bangkok", "area": 513120},
+#    {"id": 2, "name": "Australia", "capital": "Canberra", "area": 7617930},
+#    {"id": 3, "name": "Egypt", "capital": "Cairo", "area": 1010408},
+#    {"id": 4, "name": "Cuba", "capital": "Habana", "area": 110860 },
+#]
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{configParser.get('Database','db_location')}"
@@ -35,6 +35,16 @@ class Country(db.Model):
     name = db.Column(db.String(256), nullable=False)
     capital = db.Column(db.String(256), nullable=False)
     area = db.Column(db.Integer)
+
+    @property
+    def serialize(self):
+       """Return object data in easily serializable format"""
+       return {
+           'id'      : self.id,
+           'name'    : self.name,
+           'capital' : self.capital,
+           'area'    : self.area
+       }
 
     #Function to return a string when we add a country
     def __repr__(self):
@@ -52,7 +62,7 @@ def initializeDBData():
 
     app.logger.info("Test data added successfully to the database")
 
-initializeDBData()
+#initializeDBData()
 
 def biggest_area():
     """Query the database to get the country with the biggest area
@@ -78,7 +88,8 @@ def _find_next_id():
 
 @app.get("/countries")
 def get_countries():
-    return jsonify(countries)
+    countries = db.session.query(Country).all()
+    return jsonify(jsonlist =[c.serialize for c in countries])
 
 #Defining the Country schema used by expects_json decorator to validate the data posted to /countries
 schema = {

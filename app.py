@@ -1,90 +1,40 @@
 #app.py
+from distutils.command.config import config
 from flask import Flask, request, jsonify
 from flask_expects_json import expects_json
+from models import Country, db
+from config import configParser, configScheduler
 
-#This module is for the schedule task runing in backgroud
-from apscheduler.schedulers.background import BackgroundScheduler
-from flask_sqlalchemy import SQLAlchemy
-from config import configParser
-import logging
 
-#Configuring the logging
+#Initialize the app
 
-logging.basicConfig(filename=configParser.get('Logging','log_file'),
-                level=logging.getLevelName(configParser.get('Logging','log_level')), format=configParser.get('Logging','log_format'))
+def create_app():
+    app = Flask(__name__)
+    db.init_app(app)
+    return app
 
-"""
-Collection of test data in memory
-"""
-#countries = [
-#    {"id": 1, "name": "Thailand", "capital": "Bangkok", "area": 513120},
-#    {"id": 2, "name": "Australia", "capital": "Canberra", "area": 7617930},
-#    {"id": 3, "name": "Egypt", "capital": "Cairo", "area": 1010408},
-#    {"id": 4, "name": "Cuba", "capital": "Habana", "area": 110860 },
-#]
+#app = Flask(__name__)
+app = create_app()
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{configParser.get('Database','db_location')}"
+app.config['SQLALCHEMY_DATABASE_URI'] = configParser.get('Database','db_connection')
+db.init_app(app)
 
-#Initialize the database
-db = SQLAlchemy(app)
-
-#Create db model for Country
-class Country(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(256), nullable=False)
-    capital = db.Column(db.String(256), nullable=False)
-    area = db.Column(db.Integer)
-
-    @property
-    def serialize(self):
-       """Return object data in easily serializable format"""
-       return {
-           'id'      : self.id,
-           'name'    : self.name,
-           'capital' : self.capital,
-           'area'    : self.area
-       }
-
-    #Function to return a string when we add a country
-    def __repr__(self):
-        return "{0} with {1} mk2".format(self.name, self.area)
-
-def initializeDBData():
-    app.logger.info("Adding test data to database")
-    thailand = Country(name="Thailand", capital = "Bangkok", area = 513120)
-    australia = Country(name="Australia", capital = "Canberra", area = 7617930)
-    egypt = Country(name="Egypt", capital = "Cairo", area = 1010408)
-    cuba = Country(name="Cuba", capital ="Habana", area = 110860)
-    for country in (thailand, australia, egypt, cuba):
-        db.session.add(country) 
-    db.session.commit()
-
-    app.logger.info("Test data added successfully to the database")
-
-#initializeDBData()
-
-def biggest_area():
+def biggest_area(logger):
     """Query the database to get the country with the biggest area
-
     Logs the country found in the database
+    Return: None
     """
-    biggest_country =  db.session.query(Country).order_by(Country.area.desc()).first() 
-    msg= f"The country with the biggest area in the collection is {biggest_country}"
-    app.logger.info(msg)
+    try:
+        with app.app_context():
+            biggest_country =  db.session.query(Country).order_by(Country.area.desc()).first() 
+            msg= f"The country with the biggest area in the collection is {biggest_country}"
+    except Exception as e:
+        msg = f"An exception was thrown querying the database. The error was: {e}"
+    logger.info(msg)
 
-scheduler = BackgroundScheduler()
-job = scheduler.add_job(biggest_area, 'interval', seconds=10)
-scheduler.start()
 
-def _find_next_id():
-    """_summary_
-        Finds the next id for assings to a newly created country
-        Search the max used id in the countries list and add one
-    Returns:
-        int: A unique Id in the set of countries 
-    """
-    return max(country["id"] for country in countries) + 1
+configScheduler(biggest_area,[app.logger],1)
+#initializeDBData(app.logger)
 
 @app.get("/countries")
 def get_countries():
@@ -111,8 +61,6 @@ schema = {
 def add_country():
     if request.is_json:
         country = request.get_json()
-        #country["id"] = _find_next_id()
-        #countries.append(country)
         new_country=Country(name=country["name"], capital=country["capital"], area=country["area"])
         #Push to database
         try:

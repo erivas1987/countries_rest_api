@@ -4,15 +4,15 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from models import Country, db
 
 #Initialize the configParser
-configParser = configparser.RawConfigParser()   
-configFilePath = r'app_config.ini'
-configParser.read(configFilePath)
+config_parser = configparser.RawConfigParser()   
+config_file_path = r'app_config.ini'
+config_parser.read(config_file_path)
 
 #Configuring the logging
-logging.basicConfig(filename=configParser.get('Logging','log_file'),
-                level=logging.getLevelName(configParser.get('Logging','log_level')), format=configParser.get('Logging','log_format'))
+logging.basicConfig(filename=config_parser.get('Logging','log_file'),
+                level=logging.getLevelName(config_parser.get('Logging','log_level')), format=config_parser.get('Logging','log_format'))
 
-def configScheduler(job,job_args,frequency):
+def config_scheduler(job,job_args,frequency):
     """
     Creates and configures the scheduler object. 
     The scheduler object could be used to execute a background task while the app is running 

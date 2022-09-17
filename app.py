@@ -3,21 +3,24 @@ from distutils.command.config import config
 from flask import Flask, request, jsonify
 from flask_expects_json import expects_json
 from models import Country, db
-from config import configParser, configScheduler
+from config import configParser, config_scheduler
 
-
-#Initialize the app
 
 def create_app():
     app = Flask(__name__)
     db.init_app(app)
     return app
 
-#app = Flask(__name__)
+#Initialize the app
 app = create_app()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = configParser.get('Database','db_connection')
 db.init_app(app)
+
+#with app.app_context():
+#    from models import initialize_db_data
+#    db.create_all()
+#    initialize_db_data(app.logger)
 
 def biggest_area(logger):
     """Query the database to get the country with the biggest area
@@ -33,8 +36,8 @@ def biggest_area(logger):
     logger.info(msg)
 
 
-configScheduler(biggest_area,[app.logger],1)
-#initializeDBData(app.logger)
+config_scheduler(biggest_area,[app.logger],1)
+
 
 @app.get("/countries")
 def get_countries():

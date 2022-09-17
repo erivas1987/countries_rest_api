@@ -25,7 +25,7 @@ class Country(db.Model):
         return "{0} with {1} mk2".format(self.name, self.area)
 
 
-def initializeDBData(logger):
+def initialize_db_data(logger):
     """sumary_line
     Adds some initial Countries data in the database.
     This function runs only one time, when the database is created. 

@@ -1,9 +1,9 @@
 #app.py
-from distutils.command.config import config
+#from distutils.command.config import config
 from flask import Flask, request, jsonify
 from flask_expects_json import expects_json
 from models import Country, db
-from config import configParser, config_scheduler
+from config import config_parser, config_scheduler, logging
 
 
 def create_app():
@@ -14,7 +14,7 @@ def create_app():
 #Initialize the app
 app = create_app()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = configParser.get('Database','db_connection')
+app.config['SQLALCHEMY_DATABASE_URI'] = config_parser.get('Database','db_connection')
 db.init_app(app)
 
 #with app.app_context():

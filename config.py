@@ -1,7 +1,7 @@
 import configparser
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
-from models import Country, db
+#from models import Country, db
 
 #Initialize the configParser
 config_parser = configparser.RawConfigParser()   
